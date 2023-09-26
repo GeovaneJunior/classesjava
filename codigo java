@@ -1,0 +1,443 @@
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.DomDriver;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+enum Sexo {
+    MASCULINO, FEMININO, OUTRO
+}
+
+class Aluno {
+    private String nome;
+    private Sexo sexo;
+    private String matricula;
+    private String email;
+    private String senha;
+
+    public Aluno(String nome, Sexo sexo, String matricula, String email, String senha) {
+        this.nome = nome;
+        this.sexo = sexo;
+        this.matricula = matricula;
+        this.email = email;
+        this.senha = senha;
+    }
+
+    public String getMatricula() {
+        return matricula;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public Sexo getSexo() {
+        return sexo;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+}
+
+class CentralDeInformacoes {
+    private ArrayList<Aluno> todosOsAlunos;
+
+    public CentralDeInformacoes() {
+        todosOsAlunos = new ArrayList<>();
+    }
+
+    public boolean adicionarAluno(Aluno aluno) {
+        if (recuperarAlunoPorMatricula(aluno.getMatricula()) != null) {
+            return false;
+        }
+        todosOsAlunos.add(aluno);
+        return true;
+    }
+
+    public ArrayList<Aluno> getTodosOsAlunos() {
+        return todosOsAlunos;
+    }
+
+    public void setTodosOsAlunos(ArrayList<Aluno> todosOsAlunos) {
+        this.todosOsAlunos = todosOsAlunos;
+    }
+
+    public Aluno recuperarAlunoPorMatricula(String matricula) {
+        for (Aluno aluno : todosOsAlunos) {
+            if (aluno.getMatricula().equals(matricula)) {
+                return aluno;
+            }
+        }
+        return null;
+    }
+}
+
+class Persistencia {
+    private final XStream xStream;
+
+    public Persistencia() {
+        xStream = new XStream(new DomDriver());
+    }
+
+    public void salvarCentral(CentralDeInformacoes central, String nomeArquivo) {
+        try {
+            File arquivo = new File(nomeArquivo);
+            FileWriter fileWriter = new FileWriter(arquivo);
+            xStream.toXML(central, fileWriter);
+            fileWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public CentralDeInformacoes recuperarCentral(String nomeArquivo) {
+        try {
+            File arquivo = new File(nomeArquivo);
+            if (arquivo.exists()) {
+                FileReader fileReader = new FileReader(arquivo);
+                CentralDeInformacoes central = (CentralDeInformacoes) xStream.fromXML(fileReader);
+                fileReader.close();
+                return central;
+            } else {
+                return new CentralDeInformacoes();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        CentralDeInformacoes central;
+        Persistencia persistencia = new Persistencia();
+
+        central = persistencia.recuperarCentral("central.xml");
+        if (central == null) {
+            central = new CentralDeInformacoes();
+        }
+
+        while (true) {
+            System.out.println("Escolha uma opção:");
+            System.out.println("1 - Novo aluno");
+            System.out.println("2 - Listar todos os alunos");
+            System.out.println("3 - Exibir informações de um aluno específico");
+            System.out.println("S - Sair");
+
+            String opcao = scanner.nextLine();
+
+            switch (opcao) {
+                case "1":
+                    System.out.print("Nome: ");
+                    String nome = scanner.nextLine();
+                    System.out.print("Sexo (MASCULINO, FEMININO, OUTRO): ");
+                    Sexo sexo = Sexo.valueOf(scanner.nextLine().toUpperCase());
+                    System.out.print("Matrícula: ");
+                    String matricula = scanner.nextLine();
+                    System.out.print("E-mail: ");
+                    String email = scanner.nextLine();
+                    System.out.print("Senha: ");
+                    String senha = scanner.nextLine();
+
+                    Aluno novoAluno = new Aluno(nome, sexo, matricula, email, senha);
+
+                    if (central.adicionarAluno(novoAluno)) {
+                        System.out.println("Aluno cadastrado com sucesso!");
+                    } else {
+                        System.out.println("Já existe um aluno com essa matrícula. O aluno não foi cadastrado.");
+                    }
+
+                    persistencia.salvarCentral(central, "central.xml");
+                    break;
+
+                case "2":
+                    System.out.println("Lista de todos os alunos cadastrados:");
+                    for (Aluno aluno : central.getTodosOsAlunos()) {
+                        System.out.println(aluno.getNome());
+                    }
+                    break;
+
+                case "3":
+                    System.out.print("Digite a matrícula do aluno: ");
+                    String matriculaConsulta = scanner.nextLine();
+                    Aluno alunoConsultado = central.recuperarAlunoPorMatricula(matriculaConsulta);
+
+                    if (alunoConsultado != null) {
+                        System.out.println("Informações do aluno:");
+                        System.out.println("Nome: " + alunoConsultado.getNome());
+                        System.out.println("Sexo: " + alunoConsultado.getSexo());
+                        System.out.println("Matrícula: " + alunoConsultado.getMatricula());
+                        System.out.println("E-mail: " + alunoConsultado.getEmail());
+                    } else {
+                        System.out.println("Nenhum aluno encontrado com essa matrícula.");
+                    }
+                    break;
+
+                case "S":
+                case "s":
+                    System.out.println("Saindo do programa.");
+                    scanner.close();
+                    System.exit(0);
+
+                default:
+                    System.out.println("Opção inválida.");
+            }
+        }
+    }
+}
+import java.time.LocalDateTime;
+import java.util.List;
+
+class Vaga {
+    private String disciplina;
+    private int quantidadeVagas;
+    private List<Aluno> alunosInscritos;
+
+    public Vaga(String disciplina, int quantidadeVagas) {
+        this.disciplina = disciplina;
+        this.quantidadeVagas = quantidadeVagas;
+        this.alunosInscritos = new ArrayList<>();
+    }
+
+    public String getDisciplina() {
+        return disciplina;
+    }
+
+    public int getQuantidadeVagas() {
+        return quantidadeVagas;
+    }
+
+    public List<Aluno> getAlunosInscritos() {
+        return alunosInscritos;
+    }
+}
+
+class Aluno {
+    private String matricula;
+
+    public Aluno(String matricula) {
+        this.matricula = matricula;
+    }
+
+    public String getMatricula() {
+        return matricula;
+    }
+}
+
+class EditalDeMonitoria {
+    private static long idCounter = 0;
+    private long id;
+    private String numeroEdital;
+    private LocalDateTime dataInicioInscricao;
+    private LocalDateTime dataLimiteInscricao;
+    private List<Vaga> vagas;
+
+    public EditalDeMonitoria(String numeroEdital, LocalDateTime dataInicioInscricao, LocalDateTime dataLimiteInscricao) {
+        this.id = System.currentTimeMillis();
+        this.numeroEdital = numeroEdital;
+        this.dataInicioInscricao = dataInicioInscricao;
+        this.dataLimiteInscricao = dataLimiteInscricao;
+        this.vagas = new ArrayList<>();
+    }
+
+    public boolean inscrever(Aluno aluno, String disciplina) {
+        if (jaAcabou() || !existeVaga(disciplina)) {
+            return false;
+        }
+
+        for (Vaga vaga : vagas) {
+            if (vaga.getDisciplina().equals(disciplina)) {
+                vaga.getAlunosInscritos().add(aluno);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean jaAcabou() {
+        LocalDateTime agora = LocalDateTime.now();
+        return agora.isAfter(dataLimiteInscricao);
+    }
+
+    public void adicionarVaga(Vaga vaga) {
+        vagas.add(vaga);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Edital de Monitoria ").append(numeroEdital).append("\n");
+        for (Vaga vaga : vagas) {
+            stringBuilder.append("#Vagas\n");
+            stringBuilder.append(vaga.getDisciplina()).append(" - ").append(vaga.getQuantidadeVagas()).append(" vagas\n");
+        }
+        stringBuilder.append("Inscrições ").append(jaAcabou() ? "encerradas." : "abertas.");
+        return stringBuilder.toString();
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public List<Vaga> getVagas() {
+        return vagas;
+    }
+
+    private boolean existeVaga(String disciplina) {
+        for (Vaga vaga : vagas) {
+            if (vaga.getDisciplina().equals(disciplina)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+class CentralDeInformacoes {
+    private List<EditalDeMonitoria> todosOsEditais;
+
+    public CentralDeInformacoes() {
+        this.todosOsEditais = new ArrayList<>();
+    }
+
+    public boolean adicionarEdital(EditalDeMonitoria edital) {
+        for (EditalDeMonitoria e : todosOsEditais) {
+            if (e.getId() == edital.getId()) {
+                return false;
+            }
+        }
+        todosOsEditais.add(edital);
+        return true;
+    }
+
+    public EditalDeMonitoria recuperarEditalPeloId(long id) {
+        for (EditalDeMonitoria edital : todosOsEditais) {
+            if (edital.getId() == id) {
+                return edital;
+            }
+        }
+        return null;
+    }
+
+    public List<Vaga> recuperarInscricoesDeUmAlunoEmUmEdital(String matricula, long idEdital) {
+        for (EditalDeMonitoria edital : todosOsEditais) {
+            if (edital.getId() == idEdital) {
+                if (edital.jaAcabou()) {
+                    return new ArrayList<>();
+                }
+                for (Vaga vaga : edital.getVagas()) {
+                    for (Aluno aluno : vaga.getAlunosInscritos()) {
+                        if (aluno.getMatricula().equals(matricula)) {
+                            return vaga.getAlunosInscritos();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public List<EditalDeMonitoria> getTodosOsEditais() {
+        return todosOsEditais;
+    }
+}
+
+public class GeradorDeRelatorios {
+    public static void obterComprovanteDeInscricoesAluno(String matricula, long idEdital, CentralDeInformacoes centralDeInformacoes) {
+        EditalDeMonitoria edital = centralDeInformacoes.recuperarEditalPeloId(idEdital);
+        if (edital == null) {
+            System.out.println("Edital não encontrado.");
+            return;
+        }
+
+        List<Vaga> inscricoes = centralDeInformacoes.recuperarInscricoesDeUmAlunoEmUmEdital(matricula, idEdital);
+
+        if (inscricoes == null || inscricoes.isEmpty()) {
+            System.out.println("Nenhuma inscrição encontrada para o aluno nesta edição.");
+            return;
+        }
+
+        Document document = new Document();
+        try {
+            PdfWriter.getInstance(document, new FileOutputStream("comprovante.pdf"));
+            document.open();
+
+            Font font = FontFactory.getFont(FontFactory.COURIER, 16, BaseColor.BLACK);
+            Paragraph paragraph = new Paragraph("Comprovante de Inscrições do Aluno\n\n", font);
+            paragraph.setAlignment(Element.ALIGN_CENTER);
+            document.add(paragraph);
+
+            font = FontFactory.getFont(FontFactory.COURIER, 12, BaseColor.BLACK);
+            paragraph = new Paragraph("Aluno: " + matricula, font);
+            document.add(paragraph);
+
+            font = FontFactory.getFont(FontFactory.COURIER, 12, BaseColor.BLACK);
+            for (Vaga vaga : inscricoes) {
+                paragraph = new Paragraph("Disciplina: " + vaga.getDisciplina(), font);
+                document.add(paragraph);
+                paragraph = new Paragraph("Quantidade de Vagas: " + vaga.getQuantidadeVagas(), font);
+                document.add(paragraph);
+                paragraph = new Paragraph("Inscritos:\n", font);
+                document.add(paragraph);
+                for (Aluno aluno : vaga.getAlunosInscritos()) {
+                    paragraph = new Paragraph("- " + aluno.getMatricula(), font);
+                    document.add(paragraph);
+                }
+                document.add(Chunk.NEWLINE);
+            }
+
+            document.close();
+            System.out.println("Comprovante de inscrições criado com sucesso (comprovante.pdf).");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        CentralDeInformacoes centralDeInformacoes = new CentralDeInformacoes();
+
+        LocalDateTime inicioInscricao = LocalDateTime.of(2023, 9, 25, 12, 0);
+        LocalDateTime limiteInscricao = LocalDateTime.of(2023, 10, 10, 23, 59);
+        EditalDeMonitoria edital1 = new EditalDeMonitoria("2023-001", inicioInscricao, limiteInscricao);
+
+        Vaga vaga1 = new Vaga("Matemática", 3);
+        Vaga vaga2 = new Vaga("Física", 2);
+        Vaga vaga3 = new Vaga("Química", 4);
+        edital1.adicionarVaga(vaga1);
+        edital1.adicionarVaga(vaga2);
+        edital1.adicionarVaga(vaga3);
+
+        centralDeInformacoes.adicionarEdital(edital1);
+
+        Aluno aluno1 = new Aluno("12345");
+        Aluno aluno2 = new Aluno("67890");
+
+        boolean inscricaoSucesso1 = edital1.inscrever(aluno1, "Matemática");
+        boolean inscricaoSucesso2 = edital1.inscrever(aluno1, "Física");
+        boolean inscricaoSucesso3 = edital1.inscrever(aluno2, "Química");
+
+        List<Vaga> inscricoesAluno1 = centralDeInformacoes.recuperarInscricoesDeUmAlunoEmUmEdital(aluno1.getMatricula(), edital1.getId());
+        List<Vaga> inscricoesAluno2 = centralDeInformacoes.recuperarInscricoesDeUmAlunoEmUmEdital(aluno2.getMatricula(), edital1.getId());
+
+        EditalDeMonitoria editalRecuperado = centralDeInformacoes.recuperarEditalPeloId(edital1.getId());
+
+        System.out.println("Inscrição Aluno 1 em Matemática: " + inscricaoSucesso1);
+        System.out.println("Inscrição Aluno 1 em Física: " + inscricaoSucesso2);
+        System.out.println("Inscrição Aluno 2 em Química: " + inscricaoSucesso3);
+        System.out.println("Inscrições de Aluno 1: " + inscricoesAluno1);
+        System.out.println("Inscrições de Aluno 2: " + inscricoesAluno2);
+        System.out.println("Detalhes do Edital:\n" + editalRecuperado);
+        System.out.println("Quantidade de Editais cadastrados: " + centralDeInformacoes.getTodosOsEditais().size());
+    }
+}
